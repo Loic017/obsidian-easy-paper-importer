@@ -30,7 +30,7 @@ export default class EasyPaperImporter extends Plugin {
 	 * Open the DOI input modal and handle the result.
 	 */
 	private openDoiModal(): void {
-		new DoiInputModal(this.app, this.settings.paperFolder, async (filePath) => {
+		new DoiInputModal(this.app, this.settings, async (filePath) => {
 			// Open the newly created note
 			const file = this.app.vault.getAbstractFileByPath(filePath);
 			if (file) {

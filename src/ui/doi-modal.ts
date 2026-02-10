@@ -1,4 +1,5 @@
 import { App, Modal, Setting, Notice } from "obsidian";
+import { EasyPaperSettings } from "../settings";
 import { fetchPaperMetadata } from "../doi";
 import { createPaperNote } from "../note";
 
@@ -7,12 +8,12 @@ import { createPaperNote } from "../note";
  */
 export class DoiInputModal extends Modal {
 	private doiInput = "";
-	private folder: string;
+	private settings: EasyPaperSettings;
 	private onSuccess: (filePath: string) => void;
 
-	constructor(app: App, folder: string, onSuccess: (filePath: string) => void) {
+	constructor(app: App, settings: EasyPaperSettings, onSuccess: (filePath: string) => void) {
 		super(app);
-		this.folder = folder;
+		this.settings = settings;
 		this.onSuccess = onSuccess;
 	}
 
@@ -62,7 +63,7 @@ export class DoiInputModal extends Modal {
 
 		try {
 			const paper = await fetchPaperMetadata(doi);
-			const filePath = await createPaperNote(this.app, paper, this.folder);
+			const filePath = await createPaperNote(this.app, paper, this.settings);
 
 			new Notice(`Imported: ${paper.title}`);
 			this.close();

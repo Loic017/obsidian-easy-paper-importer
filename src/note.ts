@@ -1,74 +1,107 @@
 import { App, TFolder, normalizePath } from "obsidian";
-import { PaperMetadata } from "./types";
+import { PaperMetadata, normalizePaper } from "./types";
+import { EasyPaperSettings } from "./settings";
+
+// ── Helpers ─────────────────────────────────────────────────────────
 
 /**
  * Sanitise a string for use as a filename.
  * Removes characters not allowed in filenames on most OSes.
  */
 function sanitiseFilename(name: string): string {
-	return name
+	return (name ?? "")
 		.replace(/[\\/:*?"<>|]/g, "")
 		.replace(/\s+/g, " ")
 		.trim()
 		.slice(0, 200); // cap length
 }
 
+/** Escape double-quotes inside a YAML string value. */
+function yamlStr(value: string): string {
+	return `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+}
+
+/** Render a YAML list (returns empty string if array is empty). */
+function yamlList(key: string, items: string[], quote = true): string {
+	if (items.length === 0) return "";
+	const entries = items.map((v) => `  - ${quote ? yamlStr(v) : v}`);
+	return `${key}:\n${entries.join("\n")}`;
+}
+
+// ── Frontmatter ─────────────────────────────────────────────────────
+
 /**
- * Build the frontmatter YAML block for a paper note.
+ * Build a plain object containing only the metadata fields the user
+ * has selected, skipping any that are empty/missing.  Then serialise
+ * to a YAML frontmatter string.
  */
-function buildFrontmatter(paper: PaperMetadata): string {
+function buildFrontmatter(paper: PaperMetadata, settings: EasyPaperSettings): string {
 	const lines: string[] = ["---"];
 
-	lines.push(`title: "${paper.title.replace(/"/g, '\\"')}"`);
+	/**
+	 * Each renderer checks for presence internally, so missing data
+	 * is silently skipped.  The `paper` object is already normalised
+	 * (strings default to "", arrays default to []).
+	 */
+	const fieldRenderers: Record<string, () => string | null> = {
+		title: () =>
+			paper.title ? `title: ${yamlStr(paper.title)}` : null,
+		authors: () =>
+			yamlList("authors", paper.authors) || null,
+		journal: () =>
+			paper.journal ? `journal: ${yamlStr(paper.journal)}` : null,
+		year: () =>
+			paper.year != null ? `year: ${paper.year}` : null,
+		volume: () =>
+			paper.volume ? `volume: ${yamlStr(paper.volume)}` : null,
+		issue: () =>
+			paper.issue ? `issue: ${yamlStr(paper.issue)}` : null,
+		pages: () =>
+			paper.pages ? `pages: ${yamlStr(paper.pages)}` : null,
+		publisher: () =>
+			paper.publisher ? `publisher: ${yamlStr(paper.publisher)}` : null,
+		doi: () =>
+			paper.doi ? `doi: ${yamlStr(paper.doi)}` : null,
+		url: () =>
+			paper.doiUrl ? `url: ${yamlStr(paper.doiUrl)}` : null,
+		pdf: () =>
+			paper.pdfUrl ? `pdf: ${yamlStr(paper.pdfUrl)}` : null,
+		issn: () =>
+			yamlList("issn", paper.issn) || null,
+		tags: () => {
+			const tags = paper.subjects.map((s) =>
+				s.toLowerCase().replace(/\s+/g, "-"),
+			);
+			return yamlList("tags", tags, false) || null;
+		},
+	};
 
-	if (paper.authors.length > 0) {
-		lines.push("authors:");
-		for (const author of paper.authors) {
-			lines.push(`  - "${author.replace(/"/g, '\\"')}"`);
-		}
+	for (const field of settings.metadataFields) {
+		const render = fieldRenderers[field];
+		if (!render) continue; // unknown key → skip
+		const result = render();
+		if (result) lines.push(result);
 	}
 
-	if (paper.journal) lines.push(`journal: "${paper.journal.replace(/"/g, '\\"')}"`);
-	if (paper.year) lines.push(`year: ${paper.year}`);
-	if (paper.volume) lines.push(`volume: "${paper.volume}"`);
-	if (paper.issue) lines.push(`issue: "${paper.issue}"`);
-	if (paper.pages) lines.push(`pages: "${paper.pages}"`);
-	if (paper.publisher) lines.push(`publisher: "${paper.publisher.replace(/"/g, '\\"')}"`);
-
-	lines.push(`doi: "${paper.doi}"`);
-	lines.push(`url: "${paper.doiUrl}"`);
-	lines.push(`pdf: "${paper.pdfUrl}"`);
-
-	if (paper.issn.length > 0) {
-		lines.push("issn:");
-		for (const i of paper.issn) {
-			lines.push(`  - "${i}"`);
-		}
+	if (settings.includeImportDate) {
+		lines.push(`date_imported: "${new Date().toISOString().split("T")[0]}"`);
 	}
 
-	if (paper.subjects.length > 0) {
-		lines.push("tags:");
-		for (const subject of paper.subjects) {
-			// Convert to kebab-case for tags
-			const tag = subject.toLowerCase().replace(/\s+/g, "-");
-			lines.push(`  - ${tag}`);
-		}
-	}
-
-	lines.push(`date_imported: "${new Date().toISOString().split("T")[0]}"`);
 	lines.push("---");
-
 	return lines.join("\n");
 }
 
+// ── Body ────────────────────────────────────────────────────────────
+
 /**
  * Build the body content of the paper note.
+ * All guards use the normalised paper so nothing can be undefined.
  */
 function buildBody(paper: PaperMetadata): string {
 	const sections: string[] = [];
 
 	// Title
-	sections.push(`# ${paper.title}`);
+	sections.push(`# ${paper.title || "Untitled"}`);
 	sections.push("");
 
 	// Authors
@@ -101,10 +134,14 @@ function buildBody(paper: PaperMetadata): string {
 	}
 
 	// Links
-	sections.push("## Links");
-	sections.push(`- [DOI](${paper.doiUrl})`);
-	sections.push(`- [PDF](${paper.pdfUrl})`);
-	sections.push("");
+	const hasDoiLink = paper.doiUrl.length > 0;
+	const hasPdfLink = paper.pdfUrl.length > 0;
+	if (hasDoiLink || hasPdfLink) {
+		sections.push("## Links");
+		if (hasDoiLink) sections.push(`- [DOI](${paper.doiUrl})`);
+		if (hasPdfLink) sections.push(`- [PDF](${paper.pdfUrl})`);
+		sections.push("");
+	}
 
 	// Notes section for user
 	sections.push("## Notes");
@@ -112,6 +149,8 @@ function buildBody(paper: PaperMetadata): string {
 
 	return sections.join("\n");
 }
+
+// ── Folder / file creation ──────────────────────────────────────────
 
 /**
  * Ensure a folder exists in the vault, creating it if needed.
@@ -128,26 +167,33 @@ async function ensureFolder(app: App, folderPath: string): Promise<void> {
 
 /**
  * Create a markdown note for a paper in the vault.
+ *
+ * The incoming `paper` is normalised first so every field is
+ * guaranteed to have a safe default value.
+ *
  * Returns the path of the created file.
  */
 export async function createPaperNote(
 	app: App,
 	paper: PaperMetadata,
-	folder: string
+	settings: EasyPaperSettings,
 ): Promise<string> {
-	await ensureFolder(app, folder);
+	// Normalise once — all downstream code can trust the shape
+	const safe = normalizePaper(paper);
 
-	const filename = sanitiseFilename(paper.title) || "Untitled Paper";
-	let filePath = normalizePath(`${folder}/${filename}.md`);
+	await ensureFolder(app, settings.paperFolder);
+
+	const filename = sanitiseFilename(safe.title) || "Untitled Paper";
+	let filePath = normalizePath(`${settings.paperFolder}/${filename}.md`);
 
 	// Avoid overwriting: add suffix if file already exists
 	let counter = 1;
 	while (app.vault.getAbstractFileByPath(filePath)) {
-		filePath = normalizePath(`${folder}/${filename} (${counter}).md`);
+		filePath = normalizePath(`${settings.paperFolder}/${filename} (${counter}).md`);
 		counter++;
 	}
 
-	const content = buildFrontmatter(paper) + "\n\n" + buildBody(paper);
+	const content = buildFrontmatter(safe, settings) + "\n\n" + buildBody(safe);
 	await app.vault.create(filePath, content);
 
 	return filePath;
