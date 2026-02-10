@@ -1,36 +1,40 @@
-import {App, PluginSettingTab, Setting} from "obsidian";
-import MyPlugin from "./main";
+import { App, PluginSettingTab, Setting } from "obsidian";
+import EasyPaperImporter from "./main";
 
-export interface MyPluginSettings {
-	mySetting: string;
+export interface EasyPaperSettings {
+	/** Folder in the vault where paper notes are saved. */
+	paperFolder: string;
 }
 
-export const DEFAULT_SETTINGS: MyPluginSettings = {
-	mySetting: 'default'
-}
+export const DEFAULT_SETTINGS: EasyPaperSettings = {
+	paperFolder: "Papers",
+};
 
-export class SampleSettingTab extends PluginSettingTab {
-	plugin: MyPlugin;
+export class EasyPaperSettingTab extends PluginSettingTab {
+	plugin: EasyPaperImporter;
 
-	constructor(app: App, plugin: MyPlugin) {
+	constructor(app: App, plugin: EasyPaperImporter) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
 
 	display(): void {
-		const {containerEl} = this;
-
+		const { containerEl } = this;
 		containerEl.empty();
 
+		containerEl.createEl("h2", { text: "Easy Paper Importer" });
+
 		new Setting(containerEl)
-			.setName('Settings #1')
-			.setDesc('It\'s a secret')
-			.addText(text => text
-				.setPlaceholder('Enter your secret')
-				.setValue(this.plugin.settings.mySetting)
-				.onChange(async (value) => {
-					this.plugin.settings.mySetting = value;
-					await this.plugin.saveSettings();
-				}));
+			.setName("Paper folder")
+			.setDesc("Folder where imported paper notes will be created.")
+			.addText((text) =>
+				text
+					.setPlaceholder("Papers")
+					.setValue(this.plugin.settings.paperFolder)
+					.onChange(async (value) => {
+						this.plugin.settings.paperFolder = value.trim() || "Papers";
+						await this.plugin.saveSettings();
+					})
+			);
 	}
 }
