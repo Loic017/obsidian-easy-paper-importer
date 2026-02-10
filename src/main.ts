@@ -1,4 +1,4 @@
-import { Plugin, Notice } from "obsidian";
+import { Plugin, Notice, TFile } from "obsidian";
 import { DEFAULT_SETTINGS, EasyPaperSettings, EasyPaperSettingTab } from "./settings";
 import { DoiInputModal } from "./ui/doi-modal";
 import { PaperIndex } from "./indexer";
@@ -16,7 +16,7 @@ export default class EasyPaperImporter extends Plugin {
 
 		// Keep index in sync with vault changes
 		this.registerEvent(this.app.vault.on("create", (f) => {
-			this.paperIndex.updateIndexForFile(f);
+			if (f instanceof TFile) this.paperIndex.updateIndexForFile(f);
 		}));
 		this.registerEvent(this.app.vault.on("delete", (f) => {
 			this.paperIndex.removeFromIndex(f);
@@ -27,7 +27,7 @@ export default class EasyPaperImporter extends Plugin {
 			} else {
 				this.paperIndex.removeFromIndex(oldPath);
 			}
-			this.paperIndex.updateIndexForFile(file);
+			if (file instanceof TFile) this.paperIndex.updateIndexForFile(file);
 		}));
 
 		// Ribbon icon to quickly import a paper
