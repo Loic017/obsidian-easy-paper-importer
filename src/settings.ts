@@ -1,4 +1,4 @@
-import { App, PluginSettingTab, Setting } from "obsidian";
+import { App, FuzzySuggestModal, PluginSettingTab, Setting, TFile, TFolder, TextComponent } from "obsidian";
 import EasyPaperImporter from "./main";
 
 export interface EasyPaperSettings {
@@ -7,6 +7,8 @@ export interface EasyPaperSettings {
 	noteTitleFormat: string;
 	metadataFields: string[];
 	includeImportDate: boolean;
+	includePdfField: boolean;
+	templateFilePath?: string;
 	confirmDuplicateImports: boolean;
 }
 
@@ -15,8 +17,61 @@ export const DEFAULT_SETTINGS: EasyPaperSettings = {
 	noteTitleFormat: "{{first_authors}}_{{year}}",
 	metadataFields: ['title', 'authors', 'year', 'doi'],
 	includeImportDate: true,
+	includePdfField: true,
+	templateFilePath: "",
 	confirmDuplicateImports: true,
 };
+
+class FolderSuggestModal extends FuzzySuggestModal<TFolder> {
+	private onChoose: (folder: TFolder) => void;
+
+	constructor(app: App, onChoose: (folder: TFolder) => void) {
+		super(app);
+		this.onChoose = onChoose;
+	}
+
+	getItems(): TFolder[] {
+		const folders: TFolder[] = [];
+		const root = this.app.vault.getRoot();
+		const recurse = (folder: TFolder) => {
+			folders.push(folder);
+			for (const child of folder.children) {
+				if (child instanceof TFolder) recurse(child);
+			}
+		};
+		recurse(root);
+		return folders;
+	}
+
+	getItemText(item: TFolder): string {
+		return item.path || '/';
+	}
+
+	onChooseItem(item: TFolder): void {
+		this.onChoose(item);
+	}
+}
+
+class FileSuggestModal extends FuzzySuggestModal<TFile> {
+	private onChoose: (file: TFile) => void;
+
+	constructor(app: App, onChoose: (file: TFile) => void) {
+		super(app);
+		this.onChoose = onChoose;
+	}
+
+	getItems(): TFile[] {
+		return this.app.vault.getFiles().filter(f => f.extension === 'md');
+	}
+
+	getItemText(item: TFile): string {
+		return item.path;
+	}
+
+	onChooseItem(item: TFile): void {
+		this.onChoose(item);
+	}
+}
 
 export class EasyPaperSettingTab extends PluginSettingTab {
 	plugin: EasyPaperImporter;
@@ -35,16 +90,34 @@ export class EasyPaperSettingTab extends PluginSettingTab {
 			text: "Pick where to import your papers and how to name them, etc."
 		});
 
+		let folderInput: TextComponent;
 		new Setting(containerEl)
 			.setName("Folder path")
 			.setDesc("Folder where imported paper notes will be created.")
-			.addText((text) => text
-					.setPlaceholder("Papers")
+			.addText(t => {
+				folderInput = t;
+				t.setPlaceholder('Papers')
 					.setValue(this.plugin.settings.paperFolder)
-					.onChange(async (value) => {
-						this.plugin.settings.paperFolder = value.trim() || "Papers";
+					.setDisabled(true);
+			})
+			.addButton(b => b
+				.setButtonText('Browse')
+				.onClick(() => {
+					new FolderSuggestModal(this.app, async (folder) => {
+						this.plugin.settings.paperFolder = folder.path;
 						await this.plugin.saveSettings();
-					}));
+						folderInput.setValue(folder.path);
+					}).open();
+				})
+			)
+			.addButton(b => b
+				.setButtonText('Clear')
+				.onClick(async () => {
+					this.plugin.settings.paperFolder = '';
+					await this.plugin.saveSettings();
+					folderInput.setValue('');
+				})
+			);
 		
 		new Setting(containerEl)
 			.setName("Note title")
@@ -83,6 +156,50 @@ export class EasyPaperSettingTab extends PluginSettingTab {
 					this.plugin.settings.includeImportDate = v;
 					await this.plugin.saveSettings();
 			}));
+
+		new Setting(containerEl)
+			.setName('Include PDF Field')
+			.setDesc('Toggle including a field ready to be linked to the PDF of the paper. Can be useful to link either the downloaded PDF or a link to the PDF.')
+			.addToggle(t => t
+				.setValue(this.plugin.settings.includePdfField)
+				.onChange(async v => {
+					this.plugin.settings.includePdfField = v;
+					await this.plugin.saveSettings();
+			}));
+
+		new Setting(containerEl).setName("Note Body").setHeading();
+		containerEl.createEl("p", {
+			text: "Allow for custom automated note body content on file creation."
+		});
+
+		let templateInput: TextComponent;
+		new Setting(containerEl)
+			.setName('Template file path')
+			.setDesc('Set the path to a markdown file in your vault to use as a template. If empty, no template will be used.')
+			.addText(t => {
+				templateInput = t;
+				t.setPlaceholder('No template selected')
+					.setValue(this.plugin.settings.templateFilePath || '')
+					.setDisabled(true);
+			})
+			.addButton(b => b
+				.setButtonText('Browse')
+				.onClick(() => {
+					new FileSuggestModal(this.app, async (file) => {
+						this.plugin.settings.templateFilePath = file.path;
+						await this.plugin.saveSettings();
+						templateInput.setValue(file.path);
+					}).open();
+				})
+			)
+			.addButton(b => b
+				.setButtonText('Clear')
+				.onClick(async () => {
+					this.plugin.settings.templateFilePath = '';
+					await this.plugin.saveSettings();
+					templateInput.setValue('');
+				})
+			);
 
 		new Setting(containerEl).setName("Extras").setHeading();
 		containerEl.createEl("p", {

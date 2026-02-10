@@ -31,7 +31,7 @@ export default class EasyPaperImporter extends Plugin {
 		}));
 
 		// Ribbon icon to quickly import a paper
-		this.addRibbonIcon("file-input", "Import paper from DOI", () => {
+		this.addRibbonIcon("quote-glyph", "Import paper from DOI", () => {
 			this.openDoiModal();
 		});
 
@@ -72,14 +72,15 @@ export default class EasyPaperImporter extends Plugin {
 	}
 
 	async loadSettings() {
-		this.settings = Object.assign(
-			{},
-			DEFAULT_SETTINGS,
-			await this.loadData() as Partial<EasyPaperSettings>
-		);
+		const data = (await this.loadData()) ?? {};
+		// Strip internal keys so they don't leak into settings
+		const { index: _index, ...rest } = data as Record<string, unknown>;
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, rest as Partial<EasyPaperSettings>);
 	}
 
 	async saveSettings() {
-		await this.saveData(this.settings);
+		// Preserve other keys (e.g. index) already in data.json
+		const existing = (await this.loadData()) ?? {};
+		await this.saveData({ ...existing, ...this.settings });
 	}
 }
