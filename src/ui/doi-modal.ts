@@ -2,6 +2,7 @@ import { App, Modal, Setting, Notice } from "obsidian";
 import { EasyPaperSettings } from "../settings";
 import { fetchPaperMetadata } from "../doi";
 import { createPaperNote } from "../note";
+import { ConfirmDuplicateModal } from "./confirm-duplicate-modal";
 
 /**
  * Modal that prompts the user for a DOI and imports the paper.
@@ -9,13 +10,17 @@ import { createPaperNote } from "../note";
 export class DoiInputModal extends Modal {
 	private doiInput = "";
 	private settings: EasyPaperSettings;
+	private plugin: any;
 	private onSuccess: (filePath: string) => void;
 
-	constructor(app: App, settings: EasyPaperSettings, onSuccess: (filePath: string) => void) {
+	constructor(app: App, settings: EasyPaperSettings, plugin: any, onSuccess: (filePath: string) => void) {
 		super(app);
+
+		// ???
 		this.settings = settings;
+		this.plugin = plugin;
 		this.onSuccess = onSuccess;
-	}
+	} 
 
 	onOpen(): void {
 		const { contentEl } = this;
@@ -63,6 +68,17 @@ export class DoiInputModal extends Modal {
 
 		try {
 			const paper = await fetchPaperMetadata(doi);
+
+			// Duplicate check before creating the note
+			const dup = this.plugin?.paperIndex?.findDuplicate({ doi: paper.doi, title: paper.title });
+			if (dup && this.plugin?.settings?.confirmDuplicateImports) {
+				const confirmed = await new ConfirmDuplicateModal(this.app, dup.path, dup.type).openAndWait();
+				if (!confirmed) {
+					new Notice("Import cancelled (duplicate detected).");
+					return;
+				}
+			}
+
 			const filePath = await createPaperNote(this.app, paper, this.settings);
 
 			new Notice(`Imported: ${paper.title}`);

@@ -100,52 +100,7 @@ function buildFrontmatter(paper: PaperMetadata, settings: EasyPaperSettings): st
 function buildBody(paper: PaperMetadata): string {
 	const sections: string[] = [];
 
-	// Title
-	sections.push(`# ${paper.title || "Untitled"}`);
-	sections.push("");
-
-	// Authors
-	if (paper.authors.length > 0) {
-		sections.push("## Authors");
-		sections.push(paper.authors.join(", "));
-		sections.push("");
-	}
-
-	// Publication info
-	const pubParts: string[] = [];
-	if (paper.journal) pubParts.push(`**Journal:** ${paper.journal}`);
-	if (paper.year) pubParts.push(`**Year:** ${paper.year}`);
-	if (paper.volume) pubParts.push(`**Volume:** ${paper.volume}`);
-	if (paper.issue) pubParts.push(`**Issue:** ${paper.issue}`);
-	if (paper.pages) pubParts.push(`**Pages:** ${paper.pages}`);
-	if (paper.publisher) pubParts.push(`**Publisher:** ${paper.publisher}`);
-
-	if (pubParts.length > 0) {
-		sections.push("## Publication info");
-		sections.push(pubParts.join("  \n"));
-		sections.push("");
-	}
-
-	// Abstract
-	if (paper.abstract) {
-		sections.push("## Abstract");
-		sections.push(paper.abstract);
-		sections.push("");
-	}
-
-	// Links
-	const hasDoiLink = paper.doiUrl.length > 0;
-	const hasPdfLink = paper.pdfUrl.length > 0;
-	if (hasDoiLink || hasPdfLink) {
-		sections.push("## Links");
-		if (hasDoiLink) sections.push(`- [DOI](${paper.doiUrl})`);
-		if (hasPdfLink) sections.push(`- [PDF](${paper.pdfUrl})`);
-		sections.push("");
-	}
-
-	// Notes section for user
-	sections.push("## Notes");
-	sections.push("");
+	// This part will be expanded to allow for custom templates
 
 	return sections.join("\n");
 }

@@ -21,6 +21,7 @@ I could not find a paper importer that worked how I wanted it to.
 
 1. Note template: allow for user-defined note template
 2. PDF downloading: via affiliation login (?)
+3. Verify full code myself
 
 ## Installation (dev)
 
@@ -28,3 +29,8 @@ I could not find a paper importer that worked how I wanted it to.
 2. `npm install` + 'npm run dev` as shown in https://docs.obsidian.md/Plugins/Getting+started/Build+a+plugin
 
 Note: Plugins can always modify your files, use with caution in case of any issues.
+
+## Recommended
+
+1. Pair with the PDF++ plugin for easy annotations.
+2. Make a subfolder for PDFs and insert downloaded PDFs, open side by side to the note
