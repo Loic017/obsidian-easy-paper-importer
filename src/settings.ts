@@ -30,18 +30,13 @@ export class EasyPaperSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
-		containerEl.createEl("h2", { text: "Easy Paper Importer" });
-		containerEl.createEl("p", {
-			text: "Easily import papers via DOI."
-		});
-
-		containerEl.createEl("h3", { text: "Setup Basics" });
+		new Setting(containerEl).setName("Setup basics").setHeading();
 		containerEl.createEl("p", {
 			text: "Pick where to import your papers and how to name them, etc."
 		});
 
 		new Setting(containerEl)
-			.setName("Folder Path")
+			.setName("Folder path")
 			.setDesc("Folder where imported paper notes will be created.")
 			.addText((text) => text
 					.setPlaceholder("Papers")
@@ -52,7 +47,7 @@ export class EasyPaperSettingTab extends PluginSettingTab {
 					}));
 		
 		new Setting(containerEl)
-			.setName("Note Title")
+			.setName("Note title")
 			.setDesc("Define the note title format using metadata keys in double curly braces. E.g. {{title}} - {{authors}} ({{year}}). The default behaviour of {{authors}} is to only include the first author followed.")
 			.addText((text) => text
 					.setPlaceholder("{{first_authors}}_{{year}}")
@@ -62,7 +57,7 @@ export class EasyPaperSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					}));
 
-		containerEl.createEl("h3", { text: "Metadata" });
+		new Setting(containerEl).setName("Metadata").setHeading();
 		containerEl.createEl("p", {
 			text: "It is important to decide on which meta data you want early to avoid any unnecessary hassle later. Only the main ones should be fine (as in the default)."
 		});
@@ -71,6 +66,7 @@ export class EasyPaperSettingTab extends PluginSettingTab {
 			.setName('Note metadata fields')
 			.setDesc('Comma-separated list of metadata keys to include. Incorrect metadata keys will be ignored.')
 			.addText(t => t
+				// eslint-disable-next-line obsidianmd/ui/sentence-case
 				.setPlaceholder('title, authors, doi, year')
 				.setValue(this.plugin.settings.metadataFields.join(', '))
 				.onChange(async v => {
@@ -88,13 +84,13 @@ export class EasyPaperSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 			}));
 
-		containerEl.createEl("h3", { text: "Extras" });
+		new Setting(containerEl).setName("Extras").setHeading();
 		containerEl.createEl("p", {
 			text: "More functionality."
 		});
 
 		new Setting(containerEl)
-			.setName('Confirm Duplicate Imports')
+			.setName('Confirm duplicate imports')
 			.setDesc('Enable a confirmation prompt when importing a paper that has already been imported before. Utilizes title and/or DOI to detect duplicated.')
 			.addToggle(t => t
 				.setValue(this.plugin.settings.confirmDuplicateImports)

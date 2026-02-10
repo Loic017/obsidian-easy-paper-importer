@@ -16,18 +16,18 @@ export default class EasyPaperImporter extends Plugin {
 
 		// Keep index in sync with vault changes
 		this.registerEvent(this.app.vault.on("create", (f) => {
-			if (f instanceof TFile) this.paperIndex.updateIndexForFile(f);
+			if (f instanceof TFile) void this.paperIndex.updateIndexForFile(f);
 		}));
 		this.registerEvent(this.app.vault.on("delete", (f) => {
-			this.paperIndex.removeFromIndex(f);
+			void this.paperIndex.removeFromIndex(f);
 		}));
 		this.registerEvent(this.app.vault.on("rename", (file, oldPath) => {
 			if (typeof oldPath === "string") {
-				this.paperIndex.removeFromIndex({ path: oldPath });
+				void this.paperIndex.removeFromIndex({ path: oldPath });
 			} else {
-				this.paperIndex.removeFromIndex(oldPath);
+				void this.paperIndex.removeFromIndex(oldPath);
 			}
-			if (file instanceof TFile) this.paperIndex.updateIndexForFile(file);
+			if (file instanceof TFile) void this.paperIndex.updateIndexForFile(file);
 		}));
 
 		// Ribbon icon to quickly import a paper
@@ -62,11 +62,11 @@ export default class EasyPaperImporter extends Plugin {
 	 * Open the DOI input modal and handle the result.
 	 */
 	private openDoiModal(): void {
-		new DoiInputModal(this.app, this.settings, this, async (filePath) => {
+		new DoiInputModal(this.app, this.settings, this, (filePath) => {
 			// Open the newly created note
 			const file = this.app.vault.getAbstractFileByPath(filePath);
 			if (file) {
-				await this.app.workspace.openLinkText(filePath, "", true);
+				void this.app.workspace.openLinkText(filePath, "", true);
 			}
 		}).open();
 	}

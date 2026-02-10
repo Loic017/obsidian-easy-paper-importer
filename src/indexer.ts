@@ -1,4 +1,5 @@
-import { Plugin, TFile } from "obsidian";
+import { TFile } from "obsidian";
+import type EasyPaperImporter from "./main";
 
 type IndexData = {
     byDOI: Record<string, string>;
@@ -7,10 +8,10 @@ type IndexData = {
 };
 
 export class PaperIndex {
-    plugin: any;
+    plugin: EasyPaperImporter;
     index: IndexData = { byDOI: {}, byTitle: {}, meta: { version: 1, lastBuilt: undefined } };
 
-    constructor(plugin: any) {
+    constructor(plugin: EasyPaperImporter) {
         this.plugin = plugin;
     }
 
@@ -49,9 +50,9 @@ export class PaperIndex {
 
     private indexFile(f: TFile) {
         const cache = this.plugin.app.metadataCache.getFileCache(f);
-        const fm = (cache && (cache.frontmatter as Record<string, any>)) || {};
-        const doi = this.normaliseDoi(fm?.doi);
-        const title = this.normalise(fm?.title || this.getFileTitle(f));
+        const fm = cache?.frontmatter ?? {};
+        const doi = this.normaliseDoi(fm.doi as string | undefined);
+        const title = this.normalise((fm.title as string | undefined) || this.getFileTitle(f));
         if (doi) this.index.byDOI[doi] = f.path;
         if (title) this.index.byTitle[title] = f.path;
     }

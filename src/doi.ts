@@ -39,8 +39,8 @@ export async function fetchPaperMetadata(doi: string): Promise<PaperMetadata> {
 		throw new Error(`Failed to fetch DOI metadata: HTTP ${response.status}`);
 	}
 
-	const data = response.json;
-	const work = data.message;
+	const data = response.json as Record<string, unknown>;
+	const work = data.message as Record<string, unknown>;
 
 	return parseCrossRefResponse(work, cleanDoi);
 }

@@ -3,6 +3,7 @@ import { EasyPaperSettings } from "../settings";
 import { fetchPaperMetadata } from "../doi";
 import { createPaperNote } from "../note";
 import { ConfirmDuplicateModal } from "./confirm-duplicate-modal";
+import type EasyPaperImporter from "../main";
 
 /**
  * Modal that prompts the user for a DOI and imports the paper.
@@ -10,13 +11,12 @@ import { ConfirmDuplicateModal } from "./confirm-duplicate-modal";
 export class DoiInputModal extends Modal {
 	private doiInput = "";
 	private settings: EasyPaperSettings;
-	private plugin: any;
+	private plugin: EasyPaperImporter;
 	private onSuccess: (filePath: string) => void;
 
-	constructor(app: App, settings: EasyPaperSettings, plugin: any, onSuccess: (filePath: string) => void) {
+	constructor(app: App, settings: EasyPaperSettings, plugin: EasyPaperImporter, onSuccess: (filePath: string) => void) {
 		super(app);
 
-		// ???
 		this.settings = settings;
 		this.plugin = plugin;
 		this.onSuccess = onSuccess;
@@ -42,7 +42,7 @@ export class DoiInputModal extends Modal {
 				text.inputEl.addEventListener("keydown", (e: KeyboardEvent) => {
 					if (e.key === "Enter") {
 						e.preventDefault();
-						this.submit();
+						void this.submit();
 					}
 				});
 				// Focus the input after a small delay so the modal is rendered
@@ -53,7 +53,7 @@ export class DoiInputModal extends Modal {
 			.addButton((btn) => {
 				btn.setButtonText("Import")
 					.setCta()
-					.onClick(() => this.submit());
+					.onClick(() => void this.submit());
 			});
 	}
 
@@ -70,8 +70,8 @@ export class DoiInputModal extends Modal {
 			const paper = await fetchPaperMetadata(doi);
 
 			// Duplicate check before creating the note
-			const dup = this.plugin?.paperIndex?.findDuplicate({ doi: paper.doi, title: paper.title });
-			if (dup && this.plugin?.settings?.confirmDuplicateImports) {
+			const dup = this.plugin.paperIndex.findDuplicate({ doi: paper.doi, title: paper.title });
+			if (dup && this.plugin.settings.confirmDuplicateImports) {
 				const confirmed = await new ConfirmDuplicateModal(this.app, dup.path, dup.type).openAndWait();
 				if (!confirmed) {
 					new Notice("Import cancelled (duplicate detected).");
