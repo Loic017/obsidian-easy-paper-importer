@@ -10,6 +10,7 @@ export interface EasyPaperSettings {
 	includePdfField: boolean;
 	templateFilePath?: string;
 	confirmDuplicateImports: boolean;
+	customProperties: string[];
 }
 
 export const DEFAULT_SETTINGS: EasyPaperSettings = {
@@ -20,6 +21,7 @@ export const DEFAULT_SETTINGS: EasyPaperSettings = {
 	includePdfField: true,
 	templateFilePath: "",
 	confirmDuplicateImports: true,
+	customProperties: [],
 };
 
 class FolderSuggestModal extends FuzzySuggestModal<TFolder> {
@@ -200,6 +202,17 @@ export class EasyPaperSettingTab extends PluginSettingTab {
 					templateInput.setValue('');
 				})
 			);
+
+		new Setting(containerEl)
+			.setName('Custom properties')
+			.setDesc('Comma-separated list of custom frontmatter properties to include in new notes (e.g. "tags, comment").')
+			.addText(t => t
+				.setPlaceholder('tags, comment')
+				.setValue(this.plugin.settings.customProperties.join(', '))
+				.onChange(async v => {
+					this.plugin.settings.customProperties = v.split(',').map(s => s.trim()).filter(Boolean);
+					await this.plugin.saveSettings();
+				}));
 
 		new Setting(containerEl).setName("Extras").setHeading();
 		containerEl.createEl("p", {

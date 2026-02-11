@@ -125,6 +125,12 @@ function buildFrontmatter(paper: PaperMetadata, settings: EasyPaperSettings): st
 		lines.push(`date_imported: "${new Date().toISOString().split("T")[0]}"`);
 	}
 
+	// Append user-defined custom properties as empty fields
+	for (const prop of settings.customProperties ?? []) {
+		const key = prop.trim();
+		if (key) lines.push(`${key}: `);
+	}
+
 	lines.push("---");
 	return lines.join("\n");
 }
